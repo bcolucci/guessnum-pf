@@ -76,11 +76,17 @@ const ERROR_HIGHER_THAN_MAX_NUMBER = n => `Your number must be lower or equal th
 
 const ERROR_LOWER_THAN_ONE = 'Your number must be higher than 0';
 
+const DEFAULT_MAX_NUMBER = 3;
+const DEFAULT_MAX_TRIES = 10;
+
 /**
  * The game configuration
  * @constructor
  */
-const Configuration = Immutable.Record({ maxNumber: 30, maxTries: 10 });
+const GameConfiguration = Immutable.Record({
+  maxNumber: DEFAULT_MAX_NUMBER,
+  maxTries: DEFAULT_MAX_TRIES
+});
 
 /**
  * The game state
@@ -101,10 +107,10 @@ const State = Immutable.Record({
  * The play configuration
  * @constructor
  */
-const PlayConfiguration = Immutable.Record({
-  maxNumber: 3,
+const PlayEngineConfiguration = Immutable.Record({
+  maxNumber: DEFAULT_MAX_NUMBER,
+  maxTries: DEFAULT_MAX_TRIES,
   numberToGuess: 1,
-  maxTries: 2,
   initialState: new State()
 });
 
@@ -133,7 +139,7 @@ const checkPlayerNumber = (isInteger => maxNumber => {
 
 /**
  * The play engine
- * @param configuration PlayConfiguration
+ * @param configuration PlayEngineConfiguration
  * @return Function
  * @constructor
  */
@@ -188,7 +194,7 @@ const PlayEngine = function (configuration) {
 
 /**
  *
- * @param configuration Configuration
+ * @param configuration GameConfiguration
  * @return {{initialState: Record, play: Function}}
  * @constructor
  */
@@ -207,16 +213,16 @@ const Game = function (configuration) {
   if (someNumberToGuess === Maybe.Nothing)
     throw new Error('Error when generating the number to guess.');
 
-  const playConfiguration = new PlayConfiguration({
+  const engineConfiguration = new PlayEngineConfiguration({
     maxNumber: configuration_.maxNumber,
-    numberToGuess: someNumberToGuess.value(),
     maxTries: configuration_.maxTries,
+    numberToGuess: someNumberToGuess.value(),
     initialState: new State()
   });
 
   return {
-    initialState: playConfiguration.initialState,
-    play: new PlayEngine(playConfiguration)
+    initialState: engineConfiguration.initialState,
+    play: new PlayEngine(engineConfiguration)
   };
 };
 
@@ -256,12 +262,12 @@ module.exports = {
     ),
 
     State,
-    PlayConfiguration,
+    PlayEngineConfiguration,
     PlayEngine
   },
 
   // mandatory in order to play ------------------------------------------------
 
-  Configuration,
+  GameConfiguration,
   Game
 };

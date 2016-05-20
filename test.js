@@ -84,32 +84,33 @@ describe('guessnum-pf', () => {
     describe('play', () => {
 
       it('should do nothing if play is ended', () => {
-        const configuration = new lib.core.PlayConfiguration();
-        const play = new lib.core.PlayEngine(configuration);
+        const engineConfiguration = new lib.core.PlayEngineConfiguration();
+        const play = new lib.core.PlayEngine(engineConfiguration);
         play(1, new lib.core.State({ end: true })).turn.should.be.deepEqual(0);
       });
 
       it('should make error and stay in the same turn', done => {
-        const configuration = new lib.core.PlayConfiguration();
-        const play = new lib.core.PlayEngine(configuration);
+        const engineConfiguration = new lib.core.PlayEngineConfiguration();
+        const play = new lib.core.PlayEngine(engineConfiguration);
         callManyTimes(() => {
           const state = play('a');
           state.error.should.be.a.Error();
           state.turn.should.be.deepEqual(0);
-        }, configuration.maxTries + 1, done);
+        }, engineConfiguration.maxTries + 1, done);
       });
 
       it('should increment turn number if no error', () => {
-        const configuration = new lib.core.PlayConfiguration();
-        const play = new lib.core.PlayEngine(configuration);
-        configuration.initialState.turn.should.be.deepEqual(0);
+        const engineConfiguration = new lib.core.PlayEngineConfiguration();
+        const play = new lib.core.PlayEngine(engineConfiguration);
+        engineConfiguration.initialState.turn.should.be.deepEqual(0);
         const state1 = play(2);
         const state2 = play(3, state1);
-        state1.turn.should.be.deepEqual(configuration.initialState.turn + 1);
+        state1.turn.should.be.deepEqual(engineConfiguration.initialState.turn + 1);
         state2.turn.should.be.deepEqual(state1.turn + 1);
       });
       
-      //play = (numberToGuess, maxTries, checkPlayerNumber, initialState)
+      //TODO
+      
     });
 
   });
