@@ -1,0 +1,50 @@
+{
+  "name": "guessnum-pf",
+  "version": "0.0.1",
+  "author": "Brice Colucci <brice.colucci@gmail.com>",
+  "description": "Try to make a little guess number game in the FP way",
+  "license": "MIT",
+  "main": "index.js",
+  "keywords": [
+    "guess",
+    "number",
+    "functional",
+    "programming"
+  ],
+  "private": true,
+  "devDependencies": {
+    "gulp": "^3.9.1",
+    "gulp-jshint": "^2.0.1",
+    "gulp-load-plugins": "^1.2.2",
+    "gulp-mocha": "^2.2.0",
+    "gulp-watch": "^4.3.5",
+    "jshint": "^2.9.2",
+    "jshint-stylish": "^2.2.0",
+    "mocha": "^2.4.5",
+    "should": "^8.3.1"
+  },
+  "dependencies": {
+    "colors": "^1.1.2",
+    "immutable": "^3.8.1",
+    "maybe": "0.0.2",
+    "readline-sync": "^1.4.2"
+  },
+  "contributors": [
+    {
+      "name": "Brice Colucci",
+      "email": "brice.colucci@gmail.com"
+    }
+  ],
+  "homepage": "https://github.com/bcolucci/guessnum-pf",
+  "bugs": {
+    "url": "https://github.com/bcolucci/guessnum-pf/issues"
+  },
+  "scripts": {
+    "start": "gulp",
+    "test": "gulp test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bcolucci/guessnum-pf.git"
+  }
+}
