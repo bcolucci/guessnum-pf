@@ -5,11 +5,34 @@ const Maybe = require('maybe');
 
 // utils -----------------------------------------------------------------------
 
+/**
+ * @param number
+ * @returns boolean
+ */
 const isNumber = number => !isNaN(number) && Number(number) === number;
+
+/**
+ * @param number
+ * @returns boolean
+ */
 const isInteger = (isNumber => number => isNumber(number) && Math.floor(number) === number)(isNumber);
+
+/**
+ * @param number
+ * @returns number
+ */
 const toInteger = (isNumber => number => isNumber(number) ? new Maybe(Math.floor(number)) : Maybe.Nothing)(isNumber);
 
+/**
+ * @param number
+ * @returns number
+ */
 const generateRandomNumber = (isNumber => max => isNumber(max) ? new Maybe(Math.random() * max + 1) : Maybe.Nothing)(isNumber);
+
+/**
+ * @param number
+ * @returns Maybe<number>
+ */
 const generateRandomIntNumber = ((generateRandomNumber, toInteger) => max => {
   const randomFloat = generateRandomNumber(max);
   return randomFloat !== Maybe.Nothing ? toInteger(randomFloat.value()) : Maybe.Nothing;
@@ -26,8 +49,6 @@ const ERROR_LOWER_THAN_ONE = number => 'Your number must be higher than 0';
 const ERROR_HIGHER_THAN_MAX_NUMBER = max => `Your number must be lower or equal than ${max}`;
 
 const Configuration = Immutable.Record({
-  isInteger: isInteger,
-  generator: generateRandomIntNumber,
   maxNumber: 30,
   maxTries: 10
 });
@@ -43,8 +64,8 @@ const State = Immutable.Record({
   states: Immutable.Set()
 });
 
-const isValidMaxNum = isInteger => maxNumber => isInteger(maxNumber) && maxNumber > 0;
-const isValidMaxTriesNum = isInteger => (maxTries, maxNumber) => isInteger(maxTries) && maxTries <= maxNumber;
+const isValidMaxNum = (isInteger => maxNumber => isInteger(maxNumber) && maxNumber > 0)(isInteger);
+const isValidMaxTriesNum = (isInteger => (maxTries, maxNumber) => isInteger(maxTries) && maxTries <= maxNumber)(isInteger);
 
 const checkPlayerNumber = (isInteger, maxNumber) => {
   return number => {
@@ -94,23 +115,26 @@ const Game = function (configuration) {
 
   const configuration_ = configuration || new configuration();
 
-  if (typeof configuration_.isInteger !== 'function')
-    throw new Error('Please provide a isInteger function');
-
-  if (!isValidMaxNum(configuration_.isInteger)(configuration_.maxNumber))
+  if (!isValidMaxNum(configuration_.maxNumber))
     throw new Error('Invalid maxNumber configuration. Must be an integer higher or equal to 1');
 
-  if (!isValidMaxTriesNum(configuration_.isInteger)(configuration_.maxTries, configuration_.maxNumber))
+  if (!isValidMaxTriesNum(configuration_.maxTries, configuration_.maxNumber))
     throw new Error('Invalid maxTries configuration. Must be an integer higher or equal to 1 and lower ro equal than the maxNumber.');
 
   const initialState = new State();
-  const numberToGuess = configuration_.generator(configuration_.maxNumber).value();
 
-  const checkPlayerNumber_ = checkPlayerNumber(isInteger, configuration_.maxNumber);
-  const play_ = play(numberToGuess, configuration_.maxTries, checkPlayerNumber_, initialState);
+  const someNumberToGuess = generateRandomIntNumber(configuration_.maxNumber);
+  if (someNumberToGuess === Maybe.Nothing)
+    throw new Error('Error when generating the number to guess.');
+  const numberToGuess = someNumberToGuess.value();
+
+  const checkNumber = checkPlayerNumber(isInteger, configuration_.maxNumber);
 
   // here we could add internal functions for test purpose
-  return { play: play_, initialState: initialState };
+  return {
+    initialState: initialState,
+    play: play(numberToGuess, configuration_.maxTries, checkNumber, initialState)
+  };
 };
 
 module.exports = {
