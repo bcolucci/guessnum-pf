@@ -113,7 +113,7 @@ const play = (numberToGuess, maxTries, checkPlayerNumber, initialState) => {
 
 const Game = function (configuration) {
 
-  const configuration_ = configuration || new configuration();
+  const configuration_ = configuration || new Configuration();
 
   if (!isValidMaxNum(configuration_.maxNumber))
     throw new Error('Invalid maxNumber configuration. Must be an integer higher or equal to 1');
@@ -121,16 +121,14 @@ const Game = function (configuration) {
   if (!isValidMaxTriesNum(configuration_.maxTries, configuration_.maxNumber))
     throw new Error('Invalid maxTries configuration. Must be an integer higher or equal to 1 and lower ro equal than the maxNumber.');
 
-  const initialState = new State();
-
   const someNumberToGuess = generateRandomIntNumber(configuration_.maxNumber);
   if (someNumberToGuess === Maybe.Nothing)
     throw new Error('Error when generating the number to guess.');
   const numberToGuess = someNumberToGuess.value();
 
+  const initialState = new State();
   const checkNumber = checkPlayerNumber(isInteger, configuration_.maxNumber);
-
-  // here we could add internal functions for test purpose
+  
   return {
     initialState: initialState,
     play: play(numberToGuess, configuration_.maxTries, checkNumber, initialState)
@@ -143,43 +141,42 @@ module.exports = {
 
   core: {
 
-    isNumber: isNumber,
-    isInteger: isInteger,
-    toInteger: toInteger,
+    isNumber,
+    isInteger,
+    toInteger,
 
-    generateRandomNumber: generateRandomNumber,
-    generateRandomIntNumber: generateRandomIntNumber,
+    generateRandomNumber,
+    generateRandomIntNumber,
 
-    isValidMaxNum: isValidMaxNum,
-    isValidMaxTriesNum: isValidMaxTriesNum,
+    isValidMaxNum,
+    isValidMaxTriesNum,
 
-    checkPlayerNumber: checkPlayerNumber,
+    checkPlayerNumber,
 
-    RESPONSE_HIGHER: RESPONSE_HIGHER,
-    RESPONSE_LOWER: RESPONSE_LOWER,
-    RESPONSE_MAX_TRIES_EXCEEDED: RESPONSE_MAX_TRIES_EXCEEDED,
+    RESPONSE_HIGHER,
+    RESPONSE_LOWER,
+    RESPONSE_MAX_TRIES_EXCEEDED,
     responses: Immutable.Set(
       RESPONSE_HIGHER,
       RESPONSE_LOWER,
       RESPONSE_MAX_TRIES_EXCEEDED
     ),
 
-    ERROR_NOT_AN_INTEGER: ERROR_NOT_AN_INTEGER,
-    ERROR_LOWER_THAN_ONE: ERROR_LOWER_THAN_ONE,
-    ERROR_HIGHER_THAN_MAX_NUMBER: ERROR_HIGHER_THAN_MAX_NUMBER,
+    ERROR_NOT_AN_INTEGER,
+    ERROR_LOWER_THAN_ONE,
+    ERROR_HIGHER_THAN_MAX_NUMBER,
     errors: Immutable.Set(
       ERROR_NOT_AN_INTEGER,
       ERROR_LOWER_THAN_ONE,
       ERROR_HIGHER_THAN_MAX_NUMBER
     ),
 
-    State: State,
-
-    play: play
+    State,
+    play
   },
 
   // mandatory in order to play ------------------------------------------------
 
-  Configuration: Configuration,
-  Game: Game
+  Configuration,
+  Game
 };
