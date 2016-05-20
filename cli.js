@@ -4,7 +4,7 @@
 require('colors');
 const readline = require('readline-sync');
 
-const lib = require('.game');
+const lib = require('.');
 
 const print = console.log;
 const printTab = function () {

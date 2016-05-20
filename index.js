@@ -43,56 +43,40 @@ const State = Immutable.Record({
   states: Immutable.Set()
 });
 
+const isValidMaxNum = isInteger => maxNumber => isInteger(maxNumber) && maxNumber > 0;
+const isValidMaxTriesNum = isInteger => (maxTries, maxNumber) => isInteger(maxTries) && maxTries <= maxNumber;
 
-const Game = function (configuration) {
-
-  const configuration_ = configuration || new configuration();
-
-  if (typeof configuration_.isInteger !== 'function')
-    throw new Error('Please provide a isInteger function');
-
-  if (!configuration_.isInteger(configuration_.maxNumber)
-      || configuration_.maxNumber < 1)
-    throw new Error('Invalid maxNumber configuration.'
-      + ' Must be an integer higher or equal to 1');
-
-  if (!configuration_.isInteger(configuration_.maxTries)
-      || configuration_.maxTries < 1
-      || configuration_.maxTries > configuration_.maxNumber)
-    throw new Error('Invalid maxTries configuration.'
-      + 'Must be an integer higher or equal to 1 and lower ro equal than the maxNumber.');
-
-  const numberToGuess_ = configuration_.generator(configuration_.maxNumber).value();
-  const initialState_ = new State();
-
-  const checkPlayerNumber_ = (isInteger => number => {
+const checkPlayerNumber = (isInteger, maxNumber) => {
+  return number => {
     if (!isInteger(number))
       return new Maybe(ERROR_NOT_AN_INTEGER(number));
     if (number < 1)
       return new Maybe(ERROR_LOWER_THAN_ONE(number));
-    if (number > configuration_.maxNumber)
-      return new Maybe(ERROR_HIGHER_THAN_MAX_NUMBER(configuration_.maxNumber));
+    if (number > maxNumber)
+      return new Maybe(ERROR_HIGHER_THAN_MAX_NUMBER(maxNumber));
     return Maybe.Nothing;
-  })(isInteger);
+  };
+};
 
-  const play_ = (number, previousState) => {
-    const state = previousState || initialState_;
+const play = (numberToGuess, maxTries, checkPlayerNumber, initialState) => {
+  return (number, previousState) => {
+    const state = previousState || initialState;
     //TODO check state
     if (state.end) return state;
-    const checkNumber = checkPlayerNumber_(number);
+    const checkNumber = checkPlayerNumber(number);
     let nexState;
     if (checkNumber === Maybe.Nothing) {
       const nexTurn = state.turn + 1;
-      if (number === numberToGuess_)
+      if (number === numberToGuess)
         nexState = { turn: nexTurn, haveWon: true };
       else {
-        if (nexTurn === configuration_.maxTries)
+        if (nexTurn === maxTries)
           nexState = {
             turn: nexTurn,
             haveLost: true,
-            response: RESPONSE_MAX_TRIES_EXCEEDED(configuration_.maxTries)
+            response: RESPONSE_MAX_TRIES_EXCEEDED(maxTries)
           };
-        else if (number < numberToGuess_)
+        else if (number < numberToGuess)
           nexState = { turn: nexTurn, response: RESPONSE_HIGHER() };
         else
           nexState = { turn: nexTurn, response: RESPONSE_LOWER() };
@@ -104,41 +88,71 @@ const Game = function (configuration) {
     nexState.end = nexState.haveLost || nexState.haveWon;
     return new State(nexState);
   };
+};
+
+const Game = function (configuration) {
+
+  const configuration_ = configuration || new configuration();
+
+  if (typeof configuration_.isInteger !== 'function')
+    throw new Error('Please provide a isInteger function');
+
+  if (!isValidMaxNum(configuration_.isInteger)(configuration_.maxNumber))
+    throw new Error('Invalid maxNumber configuration. Must be an integer higher or equal to 1');
+
+  if (!isValidMaxTriesNum(configuration_.isInteger)(configuration_.maxTries, configuration_.maxNumber))
+    throw new Error('Invalid maxTries configuration. Must be an integer higher or equal to 1 and lower ro equal than the maxNumber.');
+
+  const initialState = new State();
+  const numberToGuess = configuration_.generator(configuration_.maxNumber).value();
+
+  const checkPlayerNumber_ = checkPlayerNumber(isInteger, configuration_.maxNumber);
+  const play_ = play(numberToGuess, configuration_.maxTries, checkPlayerNumber_, initialState);
 
   // here we could add internal functions for test purpose
-  return { play: play_, initialState: initialState_ };
+  return { play: play_, initialState: initialState };
 };
 
 module.exports = {
 
   // for tests purpose ---------------------------------------------------------
 
-  isNumber: isNumber,
-  isInteger: isInteger,
-  toInteger: toInteger,
+  core: {
 
-  generateRandomNumber: generateRandomNumber,
-  generateRandomIntNumber: generateRandomIntNumber,
+    isNumber: isNumber,
+    isInteger: isInteger,
+    toInteger: toInteger,
 
-  RESPONSE_HIGHER: RESPONSE_HIGHER,
-  RESPONSE_LOWER: RESPONSE_LOWER,
-  RESPONSE_MAX_TRIES_EXCEEDED: RESPONSE_MAX_TRIES_EXCEEDED,
-  responses: Immutable.Set(
-    RESPONSE_HIGHER,
-    RESPONSE_LOWER,
-    RESPONSE_MAX_TRIES_EXCEEDED
-  ),
+    generateRandomNumber: generateRandomNumber,
+    generateRandomIntNumber: generateRandomIntNumber,
 
-  ERROR_NOT_AN_INTEGER: ERROR_NOT_AN_INTEGER,
-  ERROR_LOWER_THAN_ONE: ERROR_LOWER_THAN_ONE,
-  ERROR_HIGHER_THAN_MAX_NUMBER: ERROR_HIGHER_THAN_MAX_NUMBER,
-  errors: Immutable.Set(
-    ERROR_NOT_AN_INTEGER,
-    ERROR_LOWER_THAN_ONE,
-    ERROR_HIGHER_THAN_MAX_NUMBER
-  ),
+    isValidMaxNum: isValidMaxNum,
+    isValidMaxTriesNum: isValidMaxTriesNum,
 
-  State: State,
+    checkPlayerNumber: checkPlayerNumber,
+
+    RESPONSE_HIGHER: RESPONSE_HIGHER,
+    RESPONSE_LOWER: RESPONSE_LOWER,
+    RESPONSE_MAX_TRIES_EXCEEDED: RESPONSE_MAX_TRIES_EXCEEDED,
+    responses: Immutable.Set(
+      RESPONSE_HIGHER,
+      RESPONSE_LOWER,
+      RESPONSE_MAX_TRIES_EXCEEDED
+    ),
+
+    ERROR_NOT_AN_INTEGER: ERROR_NOT_AN_INTEGER,
+    ERROR_LOWER_THAN_ONE: ERROR_LOWER_THAN_ONE,
+    ERROR_HIGHER_THAN_MAX_NUMBER: ERROR_HIGHER_THAN_MAX_NUMBER,
+    errors: Immutable.Set(
+      ERROR_NOT_AN_INTEGER,
+      ERROR_LOWER_THAN_ONE,
+      ERROR_HIGHER_THAN_MAX_NUMBER
+    ),
+
+    State: State,
+
+    play: play
+  },
 
   // mandatory in order to play ------------------------------------------------
 
