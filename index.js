@@ -9,13 +9,26 @@ const Maybe = require('maybe');
  * @param n number
  * @return boolean
  */
-const isNumber = n => !isNaN(n) && Number(n) === n;
+const isNumber = n => false === isNaN(n) && n === Number(n);
 
 /**
  * @param n number
  * @return boolean
  */
 const isInteger = (isNumber => n => isNumber(n) && Math.floor(n) === n)(isNumber);
+
+/**
+ * @param n number
+ * @return boolean
+ */
+const isIntegerGreaterThanZero = (isInteger => n => isInteger(n) && n > 0)(isInteger);
+
+/**
+ * @param n number
+ * @param max number
+ * @return boolean
+ */
+const isIntegerLesserOrEqualTo = (isInteger => (n, max) => isInteger(n) && n <= max)(isInteger);
 
 /**
  * @param number
@@ -35,7 +48,7 @@ const generateRandomNumber = (isNumber => max => isNumber(max) ? new Maybe(Math.
  */
 const generateRandomIntNumber = ((generateRandomNumber, toInteger) => max => {
   const randomFloat = generateRandomNumber(max);
-  return randomFloat !== Maybe.Nothing ? toInteger(randomFloat.value()) : Maybe.Nothing;
+  return randomFloat === Maybe.Nothing ? Maybe.Nothing : toInteger(randomFloat.value());
 })(generateRandomNumber, toInteger);
 
 // game specific ---------------------------------------------------------------
@@ -85,30 +98,29 @@ const State = Immutable.Record({
 });
 
 /**
- * @param maxNumber number
- * @return boolean
+ * The play configuration
+ * @constructor
  */
-const isValidMaxNum = (isInteger => maxNumber => isInteger(maxNumber) && maxNumber > 0)(isInteger);
-
-/**
- * @param maxTries number
- * @param maxNumber number
- * @return boolean
- */
-const isValidMaxTriesNum = (isInteger => (maxTries, maxNumber) => isInteger(maxTries) && maxTries <= maxNumber)(isInteger);
+const PlayConfiguration = Immutable.Record({
+  maxNumber: 3,
+  numberToGuess: 1,
+  maxTries: 2,
+  initialState: new State()
+});
 
 /**
  * @param isInteger Function
  * @param maxNumber number
  * @return Function
  */
-const checkPlayerNumber = (isInteger, maxNumber) => {
+const checkPlayerNumber = (isInteger => maxNumber => {
+
   /**
    * @param n number
    * @return Maybe<string>
    */
   return n => {
-    if (!isInteger(n))
+    if (false === isInteger(n))
       return new Maybe(ERROR_NOT_AN_INTEGER(n));
     if (n < 1)
       return new Maybe(ERROR_LOWER_THAN_ONE);
@@ -116,61 +128,61 @@ const checkPlayerNumber = (isInteger, maxNumber) => {
       return new Maybe(ERROR_HIGHER_THAN_MAX_NUMBER(maxNumber));
     return Maybe.Nothing;
   };
-};
+
+})(isInteger);
 
 /**
- * @param numberToGuess number
- * @param maxTries number
- * @param checkPlayerNumber Function
- * @param initialState State
+ * The play engine
+ * @param configuration PlayConfiguration
  * @return Function
+ * @constructor
  */
-const play = (numberToGuess, maxTries, checkPlayerNumber, initialState) => {
+const PlayEngine = function (configuration) {
+
+  const checkNumber = checkPlayerNumber(configuration.maxNumber);
+
   /**
    * @param n number
    * @param previousState State
    */
   return (n, previousState) => {
 
-    const state = previousState || initialState;
+    const state = previousState || configuration.initialState;
 
     // done is done
     if (state.end)
       return state;
 
-    let nexState;
+    const createNextState = nextState => {
+      nextState.playerNumber = n;
+      nextState.end = nextState.haveLost || nextState.haveWon || false;
+      nextState.states = state.states.add(nextState); // we keep all states (so we can check and replay)
+      return new State(nextState);
+    };
 
-    const checkNumber = checkPlayerNumber(n);
-    if (checkNumber !== Maybe.Nothing) // error case
-      nexState = { turn: state.turn, error: new Error(checkNumber.value()) };
-    else {
+    const numberValidation = checkNumber(n);
+    if (numberValidation !== Maybe.Nothing) // error case
+      return createNextState({ turn: state.turn, error: new Error(numberValidation.value()) });
 
-      const nexTurn = state.turn + 1;
-      if (n === numberToGuess) // play won!
-        nexState = { turn: nexTurn, haveWon: true };
-      else {
+    const nexTurn = state.turn + 1;
 
-        // too many tries...
-        if (nexTurn === maxTries)
-          nexState = {
-            turn: nexTurn,
-            haveLost: true,
-            response: RESPONSE_MAX_TRIES_EXCEEDED(maxTries)
-          };
-        else if (n < numberToGuess) // should try a higher number
-          nexState = { turn: nexTurn, response: RESPONSE_HIGHER };
-        else // should try a lower number
-          nexState = { turn: nexTurn, response: RESPONSE_LOWER };
+    if (n === configuration.numberToGuess) // play won!
+      return createNextState({ turn: nexTurn, haveWon: true });
 
-      }
+    // too many tries...
+    if (nexTurn === configuration.maxTries)
+      return createNextState({
+        turn: nexTurn,
+        haveLost: true,
+        response: RESPONSE_MAX_TRIES_EXCEEDED(configuration.maxTries)
+      });
 
-    }
+    // should try a higher number
+    if (n < configuration.numberToGuess)
+      return createNextState({ turn: nexTurn, response: RESPONSE_HIGHER });
 
-    nexState.playerNumber = n;
-    nexState.states = state.states.add(nexState); // we keep all states (so we can check and replay)
-    nexState.end = nexState.haveLost || nexState.haveWon;
-
-    return new State(nexState); // the new state after the action
+    // should try a lower number
+    return createNextState({ turn: nexTurn, response: RESPONSE_LOWER });
   };
 };
 
@@ -184,24 +196,27 @@ const Game = function (configuration) {
 
   const configuration_ = configuration || new Configuration();
 
-  if (!isValidMaxNum(configuration_.maxNumber))
-    throw new Error('Invalid maxNumber configuration. Must be an integer higher or equal to 1');
+  if (false === isIntegerGreaterThanZero(configuration_.maxNumber))
+    throw new Error('Invalid maxNumber configuration. Must be an integer higher to 0');
 
-  if (!isValidMaxTriesNum(configuration_.maxTries, configuration_.maxNumber))
+  if (false === isIntegerLesserOrEqualTo,(configuration_.maxTries, configuration_.maxNumber))
     throw new Error('Invalid maxTries configuration. Must be an integer higher or equal to 1 and lower ro equal than the maxNumber.');
 
   // let's generate the number the play will have to guess
   const someNumberToGuess = generateRandomIntNumber(configuration_.maxNumber);
   if (someNumberToGuess === Maybe.Nothing)
     throw new Error('Error when generating the number to guess.');
-  const numberToGuess = someNumberToGuess.value();
 
-  const initialState = new State();
-  const checkNumber = checkPlayerNumber(isInteger, configuration_.maxNumber);
+  const playConfiguration = new PlayConfiguration({
+    maxNumber: configuration_.maxNumber,
+    numberToGuess: someNumberToGuess.value(),
+    maxTries: configuration_.maxTries,
+    initialState: new State()
+  });
 
   return {
-    initialState: initialState,
-    play: play(numberToGuess, configuration_.maxTries, checkNumber, initialState)
+    initialState: playConfiguration.initialState,
+    play: new PlayEngine(playConfiguration)
   };
 };
 
@@ -213,13 +228,12 @@ module.exports = {
 
     isNumber,
     isInteger,
+    isIntegerGreaterThanZero,
+    isIntegerLesserOrEqualTo,
     toInteger,
 
     generateRandomNumber,
     generateRandomIntNumber,
-
-    isValidMaxNum,
-    isValidMaxTriesNum,
 
     checkPlayerNumber,
 
@@ -242,7 +256,8 @@ module.exports = {
     ),
 
     State,
-    play
+    PlayConfiguration,
+    PlayEngine
   },
 
   // mandatory in order to play ------------------------------------------------
